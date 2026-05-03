@@ -1,9 +1,13 @@
 spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
   liquibase:
     enabled: false
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/schedule_test
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/schedule_test}
     username: postgres
     password: root
     driver-class-name: org.postgresql.Driver
@@ -56,6 +60,9 @@ app:
     url: ${BACKEND_URL:http://localhost:8080/}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:3000}
+
+redis:
+  address: ${REDIS_URL:redis://127.0.0.1:6379}
 
 
 logging:

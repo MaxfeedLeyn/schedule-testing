@@ -9,10 +9,10 @@ import { places } from '../../constants/places';
 import './GroupSchedulePage.scss';
 
 const lessonTypeColors = {
-    lecture: '#689F38',
-    laboratory: '#1976D2',
-    practical: '#F9A825',
     seminar: '#8E24AA',
+    lecture: '#4a6cf7',
+    laboratory: '#e08830',
+    practical: '#0fa968'
 };
 
 const LessonTemporaryCardCell = (props) => {

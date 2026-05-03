@@ -3,6 +3,7 @@ package com.softserve.service.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 /**
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
  * Separated from ScheduleServiceImpl to ensure Spring AOP proxying works correctly
  * for cache annotations when called from within the same class.
  */
+@Profile("!test")
 @Service
 @Slf4j
 public class ScheduleCacheService {
