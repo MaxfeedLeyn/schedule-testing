@@ -204,6 +204,50 @@ class StudentServiceTest {
             // Act + Assert
             assertThrows(FieldNullException.class, () -> studentService.save(expected));
         }
+
+        @Test
+        void saveStudentSuccessfullyWhenSocialUserExistsAndEmailIsFree() {
+            User user = buildUser(16L, studentDTOWithId1L.getEmail());
+
+            Student mappedStudent = buildStudent(null, null, null);
+
+            Student savedStudent = buildStudent(
+                    10L,
+                    user,
+                    buildGroup(1L, "First Title")
+            );
+
+            StudentDTO dto = studentDTOWithId1L;
+
+            when(studentMapper.studentDTOToStudent(dto))
+                    .thenReturn(mappedStudent);
+
+            when(userService.findSocialUser(dto.getEmail()))
+                    .thenReturn(Optional.of(user));
+
+            when(studentRepository.isEmailInUse(dto.getEmail()))
+                    .thenReturn(false);
+
+            when(userService.automaticRegistration(
+                    dto.getEmail(),
+                    Role.ROLE_STUDENT
+            )).thenReturn(user);
+
+            when(studentRepository.save(any(Student.class)))
+                    .thenReturn(savedStudent);
+
+            Student result = studentService.save(dto);
+
+            assertNotNull(result);
+
+            assertEquals(user, result.getUser());
+
+            verify(userService)
+                    .automaticRegistration(dto.getEmail(), Role.ROLE_STUDENT);
+
+            verify(studentRepository)
+                    .save(any(Student.class));
+        }
     }
 
     // ─── update(StudentDTO) ───────────────────────────────────────────────────
@@ -274,6 +318,54 @@ class StudentServiceTest {
             assertNotNull(result);
             verify(userService).automaticRegistration(dto.getEmail(), Role.ROLE_STUDENT);
             verify(studentRepository).update(any(Student.class));
+        }
+
+        @Test
+        void updateStudentSuccessfullyWhenSocialUserExistsAndEmailBelongsToThisStudent() {
+            User user = buildUser(16L, studentDTOWithId1L.getEmail());
+
+            Student student = buildStudent(
+                    5L,
+                    null,
+                    buildGroup(1L, "Test Group")
+            );
+
+            Student updatedStudent = buildStudent(
+                    5L,
+                    user,
+                    buildGroup(1L, "Test Group")
+            );
+
+            StudentDTO dto = studentDTOWithId1L;
+            dto.setId(5L);
+
+            when(studentMapper.studentDTOToStudent(dto))
+                    .thenReturn(student);
+
+            when(studentRepository.isIdPresent(student.getId()))
+                    .thenReturn(true);
+
+            when(userService.findSocialUser(dto.getEmail()))
+                    .thenReturn(Optional.of(user));
+
+            when(studentRepository.isEmailForThisStudent(
+                    dto.getEmail(),
+                    student.getId()
+            )).thenReturn(true);
+
+            when(studentRepository.update(any(Student.class)))
+                    .thenReturn(updatedStudent);
+
+            Student result = studentService.update(dto);
+
+            assertNotNull(result);
+
+            assertEquals(user, result.getUser());
+
+            verify(studentRepository).update(argThat(updated ->
+                    updated.getUser() != null &&
+                    updated.getUser().equals(user)
+            ));
         }
     }
 
@@ -377,6 +469,70 @@ class StudentServiceTest {
             // Assert
             assertEquals(ImportSaveStatus.VALIDATION_ERROR, result.getImportSaveStatus());
             verifyNoInteractions(userService, studentRepository, groupService);
+        }
+
+        @Test
+        void saveStudentFromFileSavesNewStudentAndSetsImportData() {
+            Long groupId = 10L;
+
+            StudentImportDTO dto = buildImportDTO(
+                    "Hanna",
+                    "Romaniuk",
+                    "Stepanivna",
+                    "romaniuk@gmail.com"
+            );
+
+            GroupDTO groupDTO = new GroupDTO();
+            groupDTO.setId(groupId);
+            groupDTO.setTitle("Test");
+
+            Group group = buildGroup(groupId, "Test");
+
+            Student mappedStudent = buildStudent(null, null, null);
+
+            StudentImportDTO mappedBackDto = buildImportDTO(
+                    "Hanna",
+                    "Romaniuk",
+                    "Stepanivna",
+                    dto.getEmail()
+            );
+
+            User user = buildUser(1L, dto.getEmail());
+
+            when(userService.findSocialUser(dto.getEmail()))
+                    .thenReturn(Optional.empty());
+
+            when(studentMapper.studentImportDTOToStudent(dto))
+                    .thenReturn(mappedStudent);
+
+            when(studentRepository.getExistingStudent(mappedStudent))
+                    .thenReturn(Optional.empty());
+
+            when(groupService.getById(groupId))
+                    .thenReturn(groupDTO);
+
+            when(groupMapper.groupDTOToGroup(groupDTO))
+                    .thenReturn(group);
+
+            when(userService.automaticRegistration(
+                    dto.getEmail(),
+                    Role.ROLE_STUDENT
+            )).thenReturn(user);
+
+            when(studentMapper.studentToStudentImportDTO(any(Student.class)))
+                    .thenReturn(mappedBackDto);
+
+            StudentImportDTO result =
+                    studentService.saveStudentFromFile(groupId, dto);
+
+            assertEquals(dto.getEmail(), result.getEmail());
+
+            assertEquals(groupDTO, result.getGroupDTO());
+
+            assertEquals(
+                    ImportSaveStatus.SAVED,
+                    result.getImportSaveStatus()
+            );
         }
     }
 
